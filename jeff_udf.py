@@ -4,15 +4,28 @@ import datetime as dt
 import os, sys
 import re
 import logging
-from ipywidgets import interact, interactive, fixed, interact_manual
+import ipywidgets as widgets
+from ipywidgets import interact, interact_manual, Button, Box, Layout, interactive, fixed, interact_manual
+
+dir_home_options = ["/home/jovyan/work/", "/Users/jefalexa/"]
+for dir_home in dir_home_options:
+    if bool(re.match(dir_home, os.getcwd())):
+        break
+    else:
+        continue
+dir_clipboard = os.path.join(dir_home, "Box Sync/data_repo/interim/clipboard")
 
 
-def check_match(x, y):
-	try:
-		pattern = re.compile(y)
-		return(bool(re.match(pattern=pattern, string=x)))
-	except:
-		return("N/A")
+def check_match(x, y, Match_Case=True):
+    try:
+        if Match_Case:
+            pattern = re.compile(y)
+        else:
+            pattern = re.compile(y, flags=re.IGNORECASE)
+        return(bool(re.search(pattern=pattern, string=x)))
+    except:
+        return("N/A")
+
 		
 def usd_to_float(test_string):
     pattern = re.compile("(\$)|(USD \$)|(USD)")
@@ -144,3 +157,98 @@ def interactive_table_frame(df):
     interact(itf01, Filter1_Name=col_list, Filter2_Name=col_list, col_list=fixed(col_list), val_list=fixed(val_list))
                    
 
+
+def get_fy_info(date, calendar_fy, field=''):
+    '''Returns the fiscal calendar information for a given date
+    INPUTS:  
+        date='%Y-%m-%d'
+        calendar_fy=DataFrame with Fiscal Information, generaly saved in Interim folder
+        field=If a valid field from the DF is listed, return just the value, if not, return the entire DF
+    '''
+    f1 = calendar_fy['Fiscal Week Start Date'] <= date
+    f2 = calendar_fy['Fiscal Week End Date'] >= date
+    if field in calendar_fy.columns:
+        return(calendar_fy.loc[f1&f2, field].to_list()[0])
+    else:
+        return(calendar_fy.loc[f1&f2, :])
+
+
+def interactive_tabs(df):
+    global tab_contents
+    global tab
+    #tab_contents = df.columns.sort_values()
+    tab_contents = df.columns
+    children = []
+    for name in tab_contents:
+        try:
+            l1 = df[name].dropna().sort_values().unique().tolist()
+            l1.insert(0, '')
+            if df[name].dtype == (float or int):
+                f1 = widgets.HBox([widgets.Label(name), widgets.FloatRangeSlider(value=[df[name].min(), df[name].max()], min=df[name].min(), max=df[name].max(), step=1, disabled=False, continuous_update=False, orientation='horizontal', readout=True, readout_format='.0f', ) ])
+            else:
+                if len(l1) <= 20:
+                    f1 = widgets.HBox([widgets.Label(name), widgets.SelectMultiple(options=l1, disabled=False) ])
+                else:
+                    #f1 = widgets.Text(value='.*',placeholder='.*',description='Filter:  ',disabled=False) 
+                    f1 = widgets.HBox([widgets.Label(name), widgets.Text(value='.*',placeholder='.*',disabled=False) ])
+
+            children.append(f1)
+        except:
+            print("Error on {}".format(name))
+    tab = widgets.Tab()
+    tab.children = children
+    for i in range(len(children)):
+        tab.set_title(i, tab_contents[i])
+    return(tab)
+
+def interactive_tabs_display(df1):
+    index_num = 0
+    total_len = len(df1)
+    for index_num in range(0, len(tab_contents)):
+        tname = tab_contents[index_num]
+        tval = tab.children[index_num].children[1].value
+        if tval:
+            vt = type(tval)
+            if vt == type(tuple()):
+                if df1[tname].dtype == (float or int):
+                    if ((tab.children[index_num].children[1].min == tval[0]) & (tab.children[index_num].children[1].max == tval[1])):
+                        continue
+                    else:
+                        f1 = df1[tname] >= tval[0]
+                        f2 = df1[tname] <= tval[1]
+                        df1 = df1.loc[f1&f2, :]
+                        print("____________\n{} Min: {} - Max: {}".format(tname, tval[0], tval[1]))
+                        print("Matched {} entries".format(len(df1)))
+                else:
+                    if tval == ('',):
+                        continue
+                    else:
+                        f1 = df1[tname].isin(tval)
+                        df1 = df1.loc[f1, :]
+                    print("____________\n{} {}".format(tname, tval))
+                    print("Matched {} entries".format(len(df1)))
+            else:
+                if tval == '.*':
+                    continue
+                else:
+                    Match_Case = True
+                    df1 = df1.loc[df1[tname].apply(lambda x: check_match(x, tval, Match_Case)) == True]
+                    print("____________\n{}: '{}' Matched:\n".format(tname, tval), df1[tname].value_counts())
+    
+    print("____________\n", "Matched {} of {} entries".format(len(df1), total_len))
+    return(df1)
+
+
+def to_myclip(df):
+    date_str = dt.datetime.strftime(dt.datetime.now(), '%m-%d-%y_%H%M%S')
+    file_name = "clipboard_{}.csv".format(date_str)
+    file = os.path.join(dir_clipboard, file_name)
+    df.to_csv(file)
+    print("Saved:  {}".format(file))
+
+
+def read_myclip():
+	file = local_find_recent(dir_clipboard, x=".*.csv")[1]
+	df = pd.read_csv(file, index_col=0)
+	return(df)
+	
