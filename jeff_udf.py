@@ -105,21 +105,55 @@ def interactive_file_saveloc(dir_list, search_pattern):
     interact(test01, dir_input=dir_list, search_pattern=fixed(search_pattern))
  
  
-def interactive_file_picker(dir_list, search_pattern):
-    file = ""
-    def ifp_sub01(dir_input, search_pattern):
-        file_list = local_find_to_df(dir_input, search_pattern).sort_values(by='Modified Time', ascending=False)['Filename'].tolist()
-        file_list.insert(0, "")
-        interact(ifp_sub02, dir_input=fixed(dir_input), file_picker=file_list, search_pattern=fixed(search_pattern))
-    def ifp_sub02(dir_input, file_picker, search_pattern):
-        file = os.path.join(dir_input, file_picker)
-        if len(file_picker) > 0:
-        	global interactive_file_picker_output
-        	interactive_file_picker_output = [file_picker, file, dir_input]
-        	print("  File:  {}\n  Path:  {}\n  Size: {}\n  Modified: {}".format(file_picker, file, os.stat(file).st_size, dt.datetime.strftime(dt.datetime.fromtimestamp(os.stat(file).st_mtime), '%m-%d-%y %H:%M')))
-        else:
-            return(local_find_to_df(dir_input, search_pattern).sort_values(by='Modified Time', ascending=False))
-    interact(ifp_sub01, dir_input=dir_list, search_pattern=fixed(search_pattern))
+class file_picker():
+    '''
+    Create a file_picker object mypicker01, then call mypicker01.interactive_file_picker(dir_list=['./', '../'], search_pattern=".*") to pick files from a set of directories.  
+    Then reference file name, full file path and the directory as mypicker01.file_name, mypicker01.file_path, mypicker01.file_dir.  Or all three as mypicker01.interactive_file_picker_output
+    '''
+    dir_list = []
+    search_pattern = ""
+    def interactive_file_picker(self, dir_list=['./', '../'], search_pattern=".*"):
+        file = ""
+        interactive_file_picker_output = []
+        file_name = ""
+        file_path = ""
+        file_dir = ""
+        def ifp_sub01(dir_input, search_pattern):
+            file_list = self.local_find_to_df(dir_input, search_pattern).sort_values(by='Modified Time', ascending=False)['Filename'].tolist()
+            file_list.insert(0, "")
+            interact(ifp_sub02, dir_input=fixed(dir_input), file_picker=file_list, search_pattern=fixed(search_pattern))
+        def ifp_sub02(dir_input, file_picker, search_pattern):
+            file = os.path.join(dir_input, file_picker)
+            nonlocal interactive_file_picker_output
+            nonlocal file_name
+            nonlocal file_path
+            nonlocal file_dir
+            if len(file_picker) > 0:
+                self.interactive_file_picker_output = [file_picker, file, dir_input]
+                self.file_name, self.file_path, self.file_dir = [file_picker, file, dir_input]
+                print("  File:  {}\n  Path:  {}\n  Size: {}\n  Modified: {}".format(file_picker, file, os.stat(file).st_size, dt.datetime.strftime(dt.datetime.fromtimestamp(os.stat(file).st_mtime), '%m-%d-%y %H:%M')))
+            else:
+                return(self.local_find_to_df(dir_input, search_pattern).sort_values(by='Modified Time', ascending=False))
+        interact(ifp_sub01, dir_input=dir_list, search_pattern=fixed(search_pattern))
+
+    def local_find_to_df(self, working_dir, x=".*"):
+        pattern = re.compile(x)
+        file_list = []
+        try:
+            for file in os.listdir(working_dir):
+                if re.match(pattern=pattern, string=file):
+                    f2 = os.path.join(working_dir, file)
+                    fsize = os.stat(f2).st_size
+                    fts = os.stat(f2).st_mtime
+                    fdt = dt.datetime.fromtimestamp(fts)
+                    #print(file, fsize, fdt)
+                    file_list.append([file, fsize, fdt])
+            return(pd.DataFrame(columns=['Filename', 'Size', 'Modified Time'], data=file_list))
+        except:
+            print("Error")
+            file_list = []
+            return(pd.DataFrame(columns=['Filename', 'Size', 'Modified Time'], data=file_list))
+
 
 
 def interactive_table_frame(df):
