@@ -6,6 +6,7 @@ import re
 import logging
 import ipywidgets as widgets
 from ipywidgets import interact, interact_manual, Button, Box, Layout, interactive, fixed, interact_manual
+from IPython.display import clear_output
 
 dir_home_options = ["/home/jovyan/work/", "/Users/jefalexa/"]
 for dir_home in dir_home_options:
@@ -17,6 +18,7 @@ dir_clipboard = os.path.join(dir_home, "Box Sync/data_repo/interim/clipboard")
 
 
 def check_match(x, y, Match_Case=True):
+    '''Check if variable (x) matches regex pattern (y).  Return True, False or N/A'''
     try:
         if Match_Case:
             pattern = re.compile(y)
@@ -28,12 +30,30 @@ def check_match(x, y, Match_Case=True):
 
 		
 def usd_to_float(test_string):
+    '''Turn a string representing a dollar amount into a float. '''
     pattern = re.compile("(\$)|(USD \$)|(USD)")
     try:
         split = re.split(pattern, test_string)
         return(float(split[-1]))
     except:
         return(0)
+        
+
+def get_fy_info(date, calendar_fy, field=''):
+    '''Returns the fiscal calendar information for a given date
+    INPUTS:  
+        date='%Y-%m-%d'
+        calendar_fy=DataFrame with Fiscal Information, generaly saved in Interim folder
+        field=If a valid field from the DF is listed, return just the value, if not, return the entire DF
+    '''
+    f1 = calendar_fy['Fiscal Week Start Date'] <= date
+    f2 = calendar_fy['Fiscal Week End Date'] >= date
+    if field in calendar_fy.columns:
+        return(calendar_fy.loc[f1&f2, field].to_list()[0])
+    else:
+        return(calendar_fy.loc[f1&f2, :])
+
+
    
 def local_find(working_dir, x=".*"):
     pattern = re.compile(x)
@@ -147,22 +167,6 @@ def interactive_table_frame(df):
             print("Make a selection")
     interact(itf01, Filter1_Name=col_list, Filter2_Name=col_list, col_list=fixed(col_list), val_list=fixed(val_list))
                    
-
-
-def get_fy_info(date, calendar_fy, field=''):
-    '''Returns the fiscal calendar information for a given date
-    INPUTS:  
-        date='%Y-%m-%d'
-        calendar_fy=DataFrame with Fiscal Information, generaly saved in Interim folder
-        field=If a valid field from the DF is listed, return just the value, if not, return the entire DF
-    '''
-    f1 = calendar_fy['Fiscal Week Start Date'] <= date
-    f2 = calendar_fy['Fiscal Week End Date'] >= date
-    if field in calendar_fy.columns:
-        return(calendar_fy.loc[f1&f2, field].to_list()[0])
-    else:
-        return(calendar_fy.loc[f1&f2, :])
-
 
 def interactive_tabs(df):
     global tab_contents
@@ -305,8 +309,30 @@ class interactive_tabs():
         self.tab_contents = []
         self.tab = widgets.Tab()
         self.df = df
+        self.cols = df.columns
+
+    def select_columns(self):
+        f1 = widgets.HBox([widgets.Label("Columns"), widgets.SelectMultiple(options=self.df.columns, value=tuple(self.df.columns), disabled=False) ])
+        
+        def handle_col_change(change):
+            self.cols = list(f1.children[1].value)
+            
+        button = widgets.Button(description="Apply")
+        output = widgets.Output()
+        with output:
+            display(self.select())
+        
+        def on_button_clicked(b):
+            with output:
+                self.cols = list(f1.children[1].value)
+                clear_output(wait=True)
+                display(self.select())
+        f1.children[1].observe(on_button_clicked, names='value')
+        
+        display(f1, output)
+
     def select(self):
-        self.tab_contents = self.df.columns
+        self.tab_contents = self.cols
         children = []
         for name in self.tab_contents:
             try:
@@ -315,22 +341,21 @@ class interactive_tabs():
                 if self.df[name].dtype == (float or int):
                     f1 = widgets.HBox([widgets.Label(name), widgets.FloatRangeSlider(value=[self.df[name].min(), self.df[name].max()], min=self.df[name].min(), max=self.df[name].max(), step=1, disabled=False, continuous_update=False, orientation='horizontal', readout=True, readout_format='.0f', ) ])
                 else:
-                    if len(l1) <= 20:
+                    if len(l1) <= 30:
                         f1 = widgets.HBox([widgets.Label(name), widgets.SelectMultiple(options=l1, disabled=False) ])
                     else:
                         f1 = widgets.HBox([widgets.Label(name), widgets.Text(value='.*',placeholder='.*',disabled=False) ])
-
                 children.append(f1)
             except:
                 print("Error on {}".format(name))
         self.tab.children = children
         for i in range(len(children)):
             self.tab.set_title(i, self.tab_contents[i])
-        return(self.tab)
+        display(self.tab)
 
     def display(self):
         index_num = 0
-        df1 = self.df
+        df1 = self.df[self.cols]
         total_len = len(df1)
         for index_num in range(0, len(self.tab_contents)):
             tname = self.tab_contents[index_num]
