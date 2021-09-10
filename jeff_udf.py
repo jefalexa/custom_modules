@@ -390,3 +390,49 @@ class interactive_tabs():
 
         print("____________\n", "Matched {} of {} entries".format(len(df1), total_len))
         return(df1)
+
+
+
+
+def datetime_from_exceldate(excel_date):
+    if type(excel_date) == int:
+        excel_date = excel_date
+    elif type(excel_date) == float:
+        if excel_date > 0:
+            excel_date = int(excel_date)
+        else:
+            return("NA")
+    elif type(excel_date) == str:
+        if excel_date.isnumeric():
+            excel_date = int(excel_date)
+        else:
+            return("Error")
+    else:
+        return("NA")
+    return(dt.datetime.fromordinal(dt.datetime(1900, 1, 1).toordinal() + excel_date - 2))
+
+def datetime_plus_years(date, years):
+    try:
+        return(date + dt.timedelta(days=years*365))
+    except:
+        return("NA")
+    
+def datetime_from_string(x):
+    try:
+        return(dt.datetime.strptime(x, "%m/%d/%y"))
+    except:
+        return("NA")
+        
+def datetime_to_year(date):
+    try:
+        return(date.year)
+    except:
+        return("NA")
+    
+def datetime_to_string(date):
+    try:
+        return(dt.datetime.strftime(date, "%m/%d/%y"))
+    except:
+        return("NA")
+    
+    
