@@ -1,0 +1,12 @@
+LICENSE
+README.md
+pyproject.toml
+setup.cfg
+src/jefalexaudf/__init__.py
+src/jefalexaudf.egg-info/PKG-INFO
+src/jefalexaudf.egg-info/SOURCES.txt
+src/jefalexaudf.egg-info/dependency_links.txt
+src/jefalexaudf.egg-info/top_level.txt
+src/jefalexaudf/file_mgt/__init__.py
+src/jefalexaudf/output_decorators/__init__.py
+src/jefalexaudf/profile_product/__init__.py

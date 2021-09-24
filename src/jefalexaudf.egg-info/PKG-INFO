@@ -1,0 +1,28 @@
+Metadata-Version: 2.1
+Name: jefalexaudf
+Version: 0.0.5
+Summary: My user defined functions
+Home-page: https://github.com/jefalexa/custom_modules
+Author: Jeff Alexander
+Author-email: jefalexa@gmail.com
+License: UNKNOWN
+Project-URL: Bug Tracker, https://github.com/jefalexa/custom_modules/issues
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
+License-File: LICENSE
+
+# custom_modules
+
+# Import custom user defined functions
+sys.path.append('/home/jovyan/work/GitHub/custom_modules/')
+
+import jeff_udf as udf
+from jeff_udf import *
+
+
+
+
